@@ -1,0 +1,53 @@
+import requests
+from bs4 import BeautifulSoup
+
+def scrape_mint_forest(start, end):
+    base_url = "https://www.mintchain.io/mint-forest"
+    results = []
+    total_pages = end - start + 1
+
+    for index, random_id in enumerate(range(start, end + 1), start=1):
+        try:
+            # Generate URL
+            url = f"{base_url}?id={random_id}"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            # Parse the page content
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # Locate the div with the dynamic id and find the span inside
+            div = soup.find("div", id=lambda x: x and x.startswith("bubble-root-1732_"))
+            if div:
+                span = div.find("span", class_="font-DINCond")
+                if span:
+                    content = span.get_text(strip=True)
+                    results.append(f"{random_id}: {content}")
+                    print(f"Found content for ID {random_id}: {content}")
+                else:
+                    print(f"No matching span found for ID {random_id}")
+            else:
+                print(f"No matching div found for ID {random_id}")
+            
+            # Progress update
+            if index % 100 == 0 or index == total_pages:
+                print(f"Scraped {index}/{total_pages} pages...")
+        
+        except requests.RequestException as e:
+            print(f"Error fetching ID {random_id}: {e}")
+    
+    return results
+
+# Usage
+if __name__ == "__main__":
+    start_id = 1
+    end_id = 100
+    results = scrape_mint_forest(start_id, end_id)
+    
+    # Check if results exist
+    if results:
+        with open("results.txt", "w") as file:
+            file.write("\n".join(results))
+        print(f"Scraping completed. {len(results)} results saved to results.txt.")
+    else:
+        print("No results found to save.")
